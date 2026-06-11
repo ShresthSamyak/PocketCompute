@@ -14,6 +14,16 @@ from .auth import pairing_secret
 from .config import config
 
 
+def _force_utf8_console() -> None:
+    """The QR code uses Unicode block glyphs that legacy Windows consoles
+    (cp1252) can't encode. Switch stdout/stderr to UTF-8 so it renders."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+        except (AttributeError, ValueError, OSError):
+            pass
+
+
 def _lan_ip() -> str:
     """Best guess at the LAN IP other devices can reach."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -75,6 +85,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--show", action="store_true",
                         help="Just print the pairing QR / URL and exit")
     args = parser.parse_args(argv)
+
+    _force_utf8_console()
 
     if args.name:
         config.set("device_name", args.name)
