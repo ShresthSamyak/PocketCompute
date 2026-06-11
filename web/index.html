@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b0f17" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PocketCompute" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+  <link rel="stylesheet" href="/styles.css" />
+  <title>PocketCompute</title>
+</head>
+<body>
+  <!-- Pairing screen -->
+  <div id="pair-screen" class="screen hidden">
+    <div class="pair-card">
+      <div class="logo">◳</div>
+      <h1>PocketCompute</h1>
+      <p class="muted">Message your computer.</p>
+      <div class="pair-form">
+        <label>Computer address</label>
+        <input id="pair-host" type="text" inputmode="url" placeholder="e.g. 192.168.1.20:8765" autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <label>Pairing code</label>
+        <input id="pair-code" type="text" placeholder="from the agent terminal / QR" autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <button id="pair-btn" class="btn-primary">Pair</button>
+        <p id="pair-error" class="error hidden"></p>
+        <p class="hint">Run <code>pocketcompute</code> on your PC, then scan the QR code with your camera — it fills this in for you.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main app -->
+  <div id="app" class="app hidden">
+    <!-- Top status header -->
+    <header class="topbar">
+      <div class="device">
+        <span id="conn-dot" class="dot offline"></span>
+        <span id="device-name">My PC</span>
+      </div>
+      <div class="topstats">
+        <span class="stat"><b id="top-cpu">–</b><i>CPU</i></span>
+        <span class="stat"><b id="top-ram">–</b><i>RAM</i></span>
+        <span class="stat" id="top-gpu-wrap"><b id="top-gpu">–</b><i>GPU</i></span>
+        <span class="stat"><b id="top-jobs">0</b><i>jobs</i></span>
+      </div>
+    </header>
+
+    <!-- Tab views -->
+    <main id="views">
+      <!-- CHAT -->
+      <section class="view" data-view="chat">
+        <div id="chat-log" class="chat-log"></div>
+        <div class="quick-row" id="quick-shortcuts"></div>
+        <div class="composer">
+          <select id="chat-shell" class="shell-select"></select>
+          <input id="chat-input" type="text" placeholder="Type a command…" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <button id="chat-send" class="send-btn" aria-label="Send">➤</button>
+        </div>
+      </section>
+
+      <!-- JOBS -->
+      <section class="view hidden" data-view="jobs">
+        <div class="view-head">
+          <h2>Jobs</h2>
+          <button id="new-job-btn" class="btn-small">+ New</button>
+        </div>
+        <div id="jobs-list" class="jobs-list"></div>
+        <div id="jobs-empty" class="empty">No background jobs yet.<br/>Start a server, scraper, or training run.</div>
+      </section>
+
+      <!-- FILES -->
+      <section class="view hidden" data-view="files">
+        <div class="view-head">
+          <h2>Files</h2>
+          <button id="upload-btn" class="btn-small">↑ Upload</button>
+          <input id="upload-input" type="file" class="hidden" />
+        </div>
+        <div id="file-path" class="file-path"></div>
+        <div id="files-list" class="files-list"></div>
+      </section>
+
+      <!-- METRICS -->
+      <section class="view hidden" data-view="metrics">
+        <div class="view-head"><h2>Metrics</h2></div>
+        <div id="metrics-grid" class="metrics-grid"></div>
+        <div id="sysinfo" class="sysinfo"></div>
+      </section>
+
+      <!-- TERMINAL -->
+      <section class="view hidden" data-view="terminal">
+        <div class="view-head">
+          <h2>Terminal</h2>
+          <select id="term-shell" class="shell-select"></select>
+        </div>
+        <div id="term-output" class="term-output"></div>
+        <div class="composer term-composer">
+          <span class="prompt">$</span>
+          <input id="term-input" type="text" placeholder="command…" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <button id="term-send" class="send-btn">➤</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom tab bar -->
+    <nav class="tabbar">
+      <button class="tab active" data-tab="chat"><span class="ti">💬</span><span>Chat</span></button>
+      <button class="tab" data-tab="jobs"><span class="ti">⚙️</span><span>Jobs</span></button>
+      <button class="tab" data-tab="files"><span class="ti">📁</span><span>Files</span></button>
+      <button class="tab" data-tab="metrics"><span class="ti">📈</span><span>Metrics</span></button>
+      <button class="tab" data-tab="terminal"><span class="ti">⌨️</span><span>Terminal</span></button>
+    </nav>
+  </div>
+
+  <!-- Modal host -->
+  <div id="modal-root"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
