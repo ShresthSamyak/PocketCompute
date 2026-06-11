@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "device_name": "SS",
+  "jwt_secret": "4dd37bac7c276eb9c9d4c45a855426552f58e8e0ff6d0e4df9f629ec6b46e888",
+  "pairing_secret": "VtfdcEdQt8HqIvU6q012oefj",
+  "shortcuts": [
+    {
+      "id": "db2da22c",
+      "name": "Show disk usage",
+      "emoji": "\ud83d\udcbe",
+      "command": "Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free",
+      "shell": "powershell"
+    },
+    {
+      "id": "ac57735b",
+      "name": "Top processes",
+      "emoji": "\ud83d\udcca",
+      "command": "Get-Process | Sort-Object CPU -Descending | Select-Object -First 8 Name,CPU,WS",
+      "shell": "powershell"
+    },
+    {
+      "id": "f978ea5f",
+      "name": "WSL uptime",
+      "emoji": "\ud83d\udc27",
+      "command": "uptime",
+      "shell": "wsl"
+    }
+  ],
+  "file_roots": []
+}
