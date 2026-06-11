@@ -6,6 +6,7 @@ caller -- a missing sensor just becomes ``None``.
 """
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import time
@@ -14,6 +15,8 @@ from typing import Any
 import psutil
 
 _BOOT_TIME = psutil.boot_time()
+# The root path to report disk usage for: system drive on Windows, "/" elsewhere.
+_DISK_ROOT = (os.environ.get("SystemDrive", "C:") + os.sep) if os.name == "nt" else "/"
 _CREATIONFLAGS = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 # NVML is imported lazily so the dependency stays optional.
@@ -129,7 +132,7 @@ def _network_rate() -> dict[str, float]:
 
 def metrics() -> dict[str, Any]:
     vm = psutil.virtual_memory()
-    disk = psutil.disk_usage("/")
+    disk = psutil.disk_usage(_DISK_ROOT)
     net = _network_rate()
     return {
         "ts": time.time(),
