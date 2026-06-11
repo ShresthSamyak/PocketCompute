@@ -10,16 +10,17 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
 from fastapi import (
-    Depends,
     FastAPI,
     File,
     Form,
     HTTPException,
     Query,
+    Request,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
@@ -37,7 +38,17 @@ from .jobs import jobs
 
 WEB_DIR = (Path(__file__).resolve().parent.parent.parent / "web").resolve()
 
-app = FastAPI(title="PocketCompute Agent", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_app: "FastAPI"):
+    task = asyncio.create_task(_metrics_loop())
+    try:
+        yield
+    finally:
+        task.cancel()
+
+
+app = FastAPI(title="PocketCompute Agent", version="0.1.0", lifespan=lifespan)
 
 
 # --------------------------------------------------------------------------- #
@@ -76,12 +87,7 @@ jobs.broadcast = hub.broadcast
 # --------------------------------------------------------------------------- #
 # Auth dependency for REST routes.
 # --------------------------------------------------------------------------- #
-def require_auth(authorization: str | None = None, token: str | None = Query(default=None)) -> dict:
-    from fastapi import Header  # local import to keep signature clean
-    raise RuntimeError("placeholder")  # replaced below
-
-
-async def auth_dep(request) -> dict:  # noqa: ANN001
+async def auth_dep(request: Request) -> dict:
     header = request.headers.get("authorization", "")
     token = None
     if header.lower().startswith("bearer "):
@@ -131,7 +137,7 @@ async def pair(req: PairRequest) -> dict:
 
 
 @app.get("/api/state")
-async def state(request) -> dict:  # noqa: ANN001
+async def state(request: Request) -> dict:
     await auth_dep(request)
     return {
         "device_name": config.get("device_name"),
@@ -146,7 +152,7 @@ async def state(request) -> dict:  # noqa: ANN001
 
 
 @app.get("/api/metrics")
-async def get_metrics(request) -> dict:  # noqa: ANN001
+async def get_metrics(request: Request) -> dict:
     await auth_dep(request)
     return system.metrics()
 
@@ -155,13 +161,13 @@ async def get_metrics(request) -> dict:  # noqa: ANN001
 # Shortcuts
 # --------------------------------------------------------------------------- #
 @app.get("/api/shortcuts")
-async def get_shortcuts(request) -> dict:  # noqa: ANN001
+async def get_shortcuts(request: Request) -> dict:
     await auth_dep(request)
     return {"shortcuts": config.list_shortcuts()}
 
 
 @app.post("/api/shortcuts")
-async def create_shortcut(request, req: ShortcutRequest) -> dict:  # noqa: ANN001
+async def create_shortcut(request: Request, req: ShortcutRequest) -> dict:
     await auth_dep(request)
     sc = config.add_shortcut(req.name, req.command, req.shell, req.emoji)
     await hub.broadcast("shortcuts_changed", {"shortcuts": config.list_shortcuts()})
@@ -169,7 +175,7 @@ async def create_shortcut(request, req: ShortcutRequest) -> dict:  # noqa: ANN00
 
 
 @app.delete("/api/shortcuts/{shortcut_id}")
-async def remove_shortcut(request, shortcut_id: str) -> dict:  # noqa: ANN001
+async def remove_shortcut(request: Request, shortcut_id: str) -> dict:
     await auth_dep(request)
     ok = config.delete_shortcut(shortcut_id)
     if not ok:
@@ -182,7 +188,7 @@ async def remove_shortcut(request, shortcut_id: str) -> dict:  # noqa: ANN001
 # Files
 # --------------------------------------------------------------------------- #
 @app.get("/api/files")
-async def list_files(request, path: str | None = Query(default=None)) -> dict:  # noqa: ANN001
+async def list_files(request: Request, path: str | None = Query(default=None)) -> dict:
     await auth_dep(request)
     try:
         return filesvc.list_dir(path)
@@ -195,7 +201,7 @@ async def list_files(request, path: str | None = Query(default=None)) -> dict:  
 
 
 @app.get("/api/files/download")
-async def download_file(request, path: str = Query(...)):  # noqa: ANN001
+async def download_file(request: Request, path: str = Query(...)):
     await auth_dep(request)
     try:
         f = filesvc.file_for_download(path)
@@ -207,7 +213,7 @@ async def download_file(request, path: str = Query(...)):  # noqa: ANN001
 
 
 @app.post("/api/files/upload")
-async def upload_file(request, dest: str = Form(...), file: UploadFile = File(...)) -> dict:  # noqa: ANN001
+async def upload_file(request: Request, dest: str = Form(...), file: UploadFile = File(...)) -> dict:
     await auth_dep(request)
     data = await file.read()
     try:
@@ -220,13 +226,13 @@ async def upload_file(request, dest: str = Form(...), file: UploadFile = File(..
 # Jobs (REST mirror of the WS controls)
 # --------------------------------------------------------------------------- #
 @app.get("/api/jobs")
-async def list_jobs(request) -> dict:  # noqa: ANN001
+async def list_jobs(request: Request) -> dict:
     await auth_dep(request)
     return {"jobs": jobs.list()}
 
 
 @app.get("/api/jobs/{job_id}")
-async def job_detail(request, job_id: str) -> dict:  # noqa: ANN001
+async def job_detail(request: Request, job_id: str) -> dict:
     await auth_dep(request)
     job = jobs.get(job_id)
     if not job:
@@ -235,14 +241,14 @@ async def job_detail(request, job_id: str) -> dict:  # noqa: ANN001
 
 
 @app.post("/api/jobs")
-async def start_job(request, req: JobStartRequest) -> dict:  # noqa: ANN001
+async def start_job(request: Request, req: JobStartRequest) -> dict:
     await auth_dep(request)
     job = await jobs.start(req.name, req.command, req.shell, req.cwd)
     return job.summary()
 
 
 @app.post("/api/jobs/{job_id}/stop")
-async def stop_job(request, job_id: str) -> dict:  # noqa: ANN001
+async def stop_job(request: Request, job_id: str) -> dict:
     await auth_dep(request)
     ok = await jobs.stop(job_id)
     if not ok:
@@ -341,11 +347,6 @@ async def _metrics_loop() -> None:
         await asyncio.sleep(2.0)
         if hub.clients:
             await hub.broadcast("metrics", {"metrics": system.metrics()})
-
-
-@app.on_event("startup")
-async def _startup() -> None:
-    asyncio.create_task(_metrics_loop())
 
 
 # --------------------------------------------------------------------------- #
